@@ -87,9 +87,10 @@ uint16_t AmsRouter::OpenPort()
 {
     std::lock_guard<std::recursive_mutex> lock(mutex);
 
-    for (uint16_t i = 0; i < NUM_PORTS_MAX; ++i) {
+    const int port_base = 30000; // arbitrary or meaningful?
+    for (uint16_t i = port_base; i < NUM_PORTS_MAX; ++i) {
         if (!ports[i].IsOpen()) {
-            return ports[i].Open(PORT_BASE + i);
+            return ports[i].Open(i);
         }
     }
     return 0;
@@ -98,21 +99,21 @@ uint16_t AmsRouter::OpenPort()
 long AmsRouter::ClosePort(uint16_t port)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    if ((port < PORT_BASE) || (port >= PORT_BASE + NUM_PORTS_MAX) || !ports[port - PORT_BASE].IsOpen()) {
+    if ((port < 1) || (port >= NUM_PORTS_MAX) || !ports[port].IsOpen()) {
         return ADSERR_CLIENT_PORTNOTOPEN;
     }
-    ports[port - PORT_BASE].Close();
+    ports[port].Close();
     return 0;
 }
 
 long AmsRouter::GetLocalAddress(uint16_t port, AmsAddr* pAddr)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    if ((port < PORT_BASE) || (port >= PORT_BASE + NUM_PORTS_MAX)) {
+    if ((port < 1) || (port >= NUM_PORTS_MAX)) {
         return ADSERR_CLIENT_PORTNOTOPEN;
     }
 
-    if (ports[port - PORT_BASE].IsOpen()) {
+    if (ports[port].IsOpen()) {
         memcpy(&pAddr->netId, &localAddr, sizeof(localAddr));
         pAddr->port = port;
         return 0;
@@ -129,22 +130,22 @@ void AmsRouter::SetLocalAddress(AmsNetId netId)
 long AmsRouter::GetTimeout(uint16_t port, uint32_t& timeout)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    if ((port < PORT_BASE) || (port >= PORT_BASE + NUM_PORTS_MAX)) {
+    if ((port < 1) || (port >= NUM_PORTS_MAX)) {
         return ADSERR_CLIENT_PORTNOTOPEN;
     }
 
-    timeout = ports[port - PORT_BASE].tmms;
+    timeout = ports[port].tmms;
     return 0;
 }
 
 long AmsRouter::SetTimeout(uint16_t port, uint32_t timeout)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    if ((port < PORT_BASE) || (port >= PORT_BASE + NUM_PORTS_MAX)) {
+    if ((port < 1) || (port >= NUM_PORTS_MAX)) {
         return ADSERR_CLIENT_PORTNOTOPEN;
     }
 
-    ports[port - PORT_BASE].tmms = timeout;
+    ports[port].tmms = timeout;
     return 0;
 }
 
@@ -177,7 +178,7 @@ long AmsRouter::AdsRequest(AmsRequest& request)
     if (!ads) {
         return GLOBALERR_MISSING_ROUTE;
     }
-    return ads->AdsRequest(request, ports[request.port - Router::PORT_BASE].tmms);
+    return ads->AdsRequest(request, ports[request.port].tmms);
 }
 
 long AmsRouter::AddNotification(AmsRequest& request, uint32_t* pNotification, std::shared_ptr<Notification> notify)
@@ -191,7 +192,7 @@ long AmsRouter::AddNotification(AmsRequest& request, uint32_t* pNotification, st
         return GLOBALERR_MISSING_ROUTE;
     }
 
-    auto& port = ports[request.port - Router::PORT_BASE];
+    auto& port = ports[request.port];
     const long status = ads->AdsRequest(request, port.tmms);
     if (!status) {
         *pNotification = qFromLittleEndian<uint32_t>((uint8_t*)request.buffer);
@@ -203,6 +204,6 @@ long AmsRouter::AddNotification(AmsRequest& request, uint32_t* pNotification, st
 
 long AmsRouter::DelNotification(uint16_t port, const AmsAddr* pAddr, uint32_t hNotification)
 {
-    auto& p = ports[port - Router::PORT_BASE];
+    auto& p = ports[port];
     return p.DelNotification(*pAddr, hNotification);
 }

@@ -167,7 +167,7 @@ uint32_t AmsConnection::GetInvokeId()
 
 AmsResponse* AmsConnection::GetPending(const uint32_t id, const uint16_t port)
 {
-    const uint16_t portIndex = port - Router::PORT_BASE;
+    const uint16_t portIndex = port;
     if (portIndex >= Router::NUM_PORTS_MAX) {
         LOG_WARN("Port 0x" << std::hex << port << " is out of range");
         return nullptr;
@@ -184,11 +184,11 @@ AmsResponse* AmsConnection::GetPending(const uint32_t id, const uint16_t port)
 AmsResponse* AmsConnection::Reserve(AmsRequest* request, const uint16_t port)
 {
     AmsRequest* isFree = nullptr;
-    if (!queue[port - Router::PORT_BASE].request.compare_exchange_strong(isFree, request)) {
+    if (!queue[port].request.compare_exchange_strong(isFree, request)) {
         LOG_WARN("Port: " << port << " already in use as " << isFree);
         return nullptr;
     }
-    return &queue[port - Router::PORT_BASE];
+    return &queue[port];
 }
 
 void AmsResponse::Release()

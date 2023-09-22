@@ -33,9 +33,10 @@ struct AmsPort {
     AmsPort();
     void Close();
     bool IsOpen() const;
-    uint16_t Open(uint16_t __port);
+    uint16_t Open(uint16_t __port, bool __local = false);
     uint32_t tmms;
     uint16_t port;
+    bool local;
 
     void AddNotification(NotifyMapping mapping);
     long DelNotification(const AmsAddr& ams, uint32_t hNotify);

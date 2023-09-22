@@ -32,7 +32,8 @@ bool operator==(const AmsAddr& lhs, const AmsAddr& rhs)
 
 AmsPort::AmsPort()
     : tmms(DEFAULT_TIMEOUT),
-    port(0)
+    port(0),
+    local(false)
 {}
 
 void AmsPort::AddNotification(NotifyMapping mapping)
@@ -74,8 +75,9 @@ bool AmsPort::IsOpen() const
     return !!port;
 }
 
-uint16_t AmsPort::Open(uint16_t __port)
+uint16_t AmsPort::Open(uint16_t __port, bool __local)
 {
     port = __port;
+    local = __local;
     return port;
 }
