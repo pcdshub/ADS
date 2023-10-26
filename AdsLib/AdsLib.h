@@ -57,6 +57,14 @@ long AdsPortCloseEx(long port);
 long AdsPortOpenEx();
 
 /**
+ * Establishes a connection (communication port) to the message
+ * router on localhost. The port number returned by AdsPortOpenEx() is required as
+ * parameter for further AdsLib function calls.
+ * @return port number of a new Ads port or 0 if no more ports available
+ */
+bool AdsPortOpenLocalEx(uint16_t& port);
+
+/**
  * Returns the local NetId and port number.
  * @param[in] port port number of an Ads port that had previously been opened with AdsPortOpenEx().
  * @param[out] pAddr Pointer to the structure of type AmsAddr.

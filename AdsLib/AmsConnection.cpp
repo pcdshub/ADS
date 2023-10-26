@@ -20,6 +20,8 @@
    SOFTWARE.
  */
 
+#include <thread>
+
 #include "AmsConnection.h"
 #include "Log.h"
 
@@ -308,6 +310,10 @@ void AmsConnection::Recv()
 {
     AmsTcpHeader amsTcpHeader;
     AoEHeader aoeHeader;
+    // TODO: this is not how this should be synchronized, clearly!
+    // this just gives the "local port request" method time to run
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    LOG_WARN("Recv() delayed start");
     for ( ; ownIp; ) {
         Receive(amsTcpHeader);
         if (amsTcpHeader.length() < sizeof(aoeHeader)) {

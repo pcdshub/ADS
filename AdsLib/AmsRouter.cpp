@@ -21,9 +21,12 @@
  */
 
 #include "AmsRouter.h"
+#include "Frame.h"
 #include "Log.h"
 
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
 
 AmsRouter::AmsRouter(AmsNetId netId)
     : localAddr(netId)
@@ -81,6 +84,75 @@ void AmsRouter::DeleteIfLastConnection(const AmsConnection* conn)
         }
         connections.erase(conn->destIp);
     }
+}
+
+bool AmsRouter::OpenLocalPort(uint16_t &port)
+{
+    std::lock_guard<std::recursive_mutex> lock(mutex);
+    IpV4 localhost_ip { std::string("127.0.0.1") };
+    AmsNetId localhost { localhost };
+    LOG_INFO("Requesting a port on localhost...");
+    auto conn = GetConnection(localhost);
+    if (!conn) {
+        if (AddRoute(localhost, localhost_ip)) {
+            LOG_ERROR("Unable to add localhost route?");
+            return false;
+        }
+        LOG_INFO("Automatically added a localhost route");
+        conn = GetConnection(localhost);
+        if (!conn) {
+            LOG_ERROR("Still no connection? I don't know what I'm doing");
+            return false;
+        }
+    }
+
+    const uint8_t request[] = {
+        // AMS_TCP_PORT_CONNECT 0x1000 -> 0, 16
+        0, 16,
+        // data length 0x00 00 00 02 -> 2, 0, 0, 0
+        2, 0, 0, 0,
+        // Data: Requested ADS Port (0 to let the server assign it)
+        // NOTE: this is only for "local" mode
+        0, 0,
+    };
+
+    Frame request_frame { sizeof(request), request };
+    // conn->Write only deals in AMS frames, so use the socket directly
+    if (conn->socket.write(request_frame) != request_frame.size()) {
+        LOG_ERROR("Failed to write the request packet");
+        return false;
+    }
+    uint8_t response[14] = { 0 };
+    const uint8_t expected_response_header[6] { 0, 16, 8, 0, 0, 0 };
+    timeval timeout = { 1, 0 };
+    conn->Receive(response, sizeof(response), &timeout);
+    AmsAddr *our_addr = reinterpret_cast<AmsAddr*>(&response[6]);
+    std::cout << "Our address according to the server is: " << 
+        our_addr->netId << " with port " << 
+        our_addr->port << std::endl;
+
+    if (memcmp(response, expected_response_header, sizeof(expected_response_header))) {
+        LOG_ERROR("... but the response header was wrong anyway, so no deal.");
+        std::cout << "Expected response header was: ";
+        for (int idx = 0; idx < sizeof(expected_response_header); ++idx) {
+            std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(expected_response_header[idx]) << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Full response was: ";
+        for (int idx = 0; idx < sizeof(response); ++idx) {
+            std::cout << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(response[idx]) << " ";
+        }
+        std::cout << std::endl;
+        return false;
+    }
+    if (our_addr->port != 0) {
+        port = our_addr->port;
+        if (!ports[port].IsOpen()) {
+          ports[port].Open(port);
+        }
+        return true;
+    }
+    return false;
 }
 
 uint16_t AmsRouter::OpenPort()
