@@ -27,6 +27,7 @@
 #include "wrap_socket.h"
 #include <exception>
 #include <string>
+#include <stdexcept>
 
 struct IpV4 {
     const uint32_t value;
