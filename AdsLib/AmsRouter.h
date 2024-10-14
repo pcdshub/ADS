@@ -29,6 +29,7 @@ struct AmsRouter : Router {
     AmsRouter(AmsNetId netId = AmsNetId {});
 
     uint16_t OpenPort();
+    bool OpenLocalPort(uint16_t &port);
     long ClosePort(uint16_t port);
     long GetLocalAddress(uint16_t port, AmsAddr* pAddr);
     void SetLocalAddress(AmsNetId netId);

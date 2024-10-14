@@ -69,6 +69,11 @@ long AdsPortOpenEx()
     return GetRouter().OpenPort();
 }
 
+bool AdsPortOpenLocalEx(uint16_t& port)
+{
+    return GetRouter().OpenLocalPort(port);
+}
+
 long AdsGetLocalAddressEx(long port, AmsAddr* pAddr)
 {
     ASSERT_PORT_AND_AMSADDR(port, pAddr);
