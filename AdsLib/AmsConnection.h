@@ -111,6 +111,8 @@ private:
     void Recv();
     void TryRecv();
     uint32_t GetInvokeId();
+    bool RequestLocalPort(uint16_t &port);
+    bool FreeLocalPort(uint16_t port);
     AmsResponse* Reserve(AmsRequest* request, uint16_t port);
     AmsResponse* GetPending(uint32_t id, uint16_t port);
 

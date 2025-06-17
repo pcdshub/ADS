@@ -20,6 +20,8 @@
    SOFTWARE.
  */
 
+#include <thread>
+
 #include "AmsConnection.h"
 #include "Log.h"
 
@@ -172,7 +174,7 @@ uint32_t AmsConnection::GetInvokeId()
 
 AmsResponse* AmsConnection::GetPending(const uint32_t id, const uint16_t port)
 {
-    const uint16_t portIndex = port - Router::PORT_BASE;
+    const uint16_t portIndex = port;
     if (portIndex >= Router::NUM_PORTS_MAX) {
         LOG_WARN("Port 0x" << std::hex << port << " is out of range");
         return nullptr;
@@ -189,11 +191,11 @@ AmsResponse* AmsConnection::GetPending(const uint32_t id, const uint16_t port)
 AmsResponse* AmsConnection::Reserve(AmsRequest* request, const uint16_t port)
 {
     AmsRequest* isFree = nullptr;
-    if (!queue[port - Router::PORT_BASE].request.compare_exchange_strong(isFree, request)) {
+    if (!queue[port].request.compare_exchange_strong(isFree, request)) {
         LOG_WARN("Port: " << port << " already in use as " << isFree);
         return nullptr;
     }
-    return &queue[port - Router::PORT_BASE];
+    return &queue[port];
 }
 
 void AmsResponse::Release()
@@ -313,6 +315,10 @@ void AmsConnection::Recv()
 {
     AmsTcpHeader amsTcpHeader;
     AoEHeader aoeHeader;
+    // TODO: this is not how this should be synchronized, clearly!
+    // this just gives the "local port request" method time to run
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    LOG_WARN("Recv() delayed start");
     for ( ; ownIp; ) {
         Receive(amsTcpHeader);
         if (amsTcpHeader.length() < sizeof(aoeHeader)) {
